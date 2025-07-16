@@ -1,6 +1,7 @@
 package com.denicks21.speechandtext.screen
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -26,6 +27,7 @@ import androidx.compose.ui.unit.Dp
 import com.denicks21.speechandtext.ui.composables.AnalysisButton
 import com.denicks21.speechandtext.ui.composables.ModeSelectionCard
 import com.denicks21.speechandtext.viewmodel.Incident
+import com.denicks21.speechandtext.util.KunturLogger
 import kotlinx.coroutines.flow.StateFlow
 import kotlin.math.roundToInt
 
@@ -145,7 +147,13 @@ fun HomePage(
                     )
 
                     IconButton(
-                        onClick = onToggleListening,
+                        onClick = {
+                            KunturLogger.logUIAction(
+                                if (isListening) "Stop listening button pressed" else "Start listening button pressed",
+                                "HOME_PAGE"
+                            )
+                            onToggleListening()
+                        },
                         modifier = Modifier
                             .size(128.dp)
                             .background(Color.Transparent, CircleShape)
@@ -167,7 +175,13 @@ fun HomePage(
             // — Modo de operación (nuevo) —
             ModeSelectionCard(
                 isManualMode = isManualMode,
-                onModeChange = onModeChange
+                onModeChange = { newMode ->
+                    KunturLogger.logUIAction(
+                        "Mode changed to ${if (newMode) "Manual" else "Automatic"}",
+                        "HOME_PAGE"
+                    )
+                    onModeChange(newMode)
+                }
             )
             
             Spacer(modifier = Modifier.height(8.dp))
@@ -187,7 +201,10 @@ fun HomePage(
             // — Botón de análisis (solo visible en modo manual) —
             if (isManualMode) {
                 AnalysisButton(
-                    onClick = onAnalyzeClicked,
+                    onClick = {
+                        KunturLogger.logUIAction("Manual Analysis button pressed", "HOME_PAGE")
+                        onAnalyzeClicked()
+                    },
                     enabled = speechInput.isNotBlank()
                 )
             }
@@ -202,17 +219,39 @@ fun HomePage(
                 .padding(bottom = 0.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            MetricCard(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight(),
-                icon = painterResource(id = R.drawable.ic_notification),
-                label = "Última alerta",
-                value = "21:39",
-                cardAlpha = METRIC_CARD_ALPHA,
-                cornerSize = METRIC_CARD_CORNER,
-                elevation = 0.dp
-            )
+            // Botón de alerta en modo manual o card informativa en modo automático
+            if (isManualMode) {
+                // Botón de alerta para modo manual
+                ActionableMetricCard(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
+                    icon = painterResource(id = R.drawable.ic_notification),
+                    label = "ALERTAR",
+                    value = "Activar alarma",
+                    cardAlpha = if (speechInput.isNotBlank()) METRIC_CARD_ALPHA + 0.5f else METRIC_CARD_ALPHA,
+                    cornerSize = METRIC_CARD_CORNER,
+                    elevation = if (speechInput.isNotBlank()) 3.dp else 0.dp,
+                    isEnabled = speechInput.isNotBlank(),
+                    onClick = {
+                        KunturLogger.logUIAction("ALERT button pressed in manual mode", "HOME_PAGE")
+                        onAnalyzeClicked()
+                    }
+                )
+            } else {
+                // Card informativa para modo automático
+                MetricCard(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
+                    icon = painterResource(id = R.drawable.ic_notification),
+                    label = "Alerta desabilitada",
+                    value = "no",
+                    cardAlpha = METRIC_CARD_ALPHA,
+                    cornerSize = METRIC_CARD_CORNER,
+                    elevation = 0.dp
+                )
+            }
 
             // Por ejemplo, muestra el número de incidencias en un MetricCard
             MetricCard(
@@ -257,6 +296,67 @@ private fun MetricCard(
             Icon(painter = icon, contentDescription = null, tint = MaterialTheme.colors.onSurface)
             Text(text = label, style = MaterialTheme.typography.caption, color = MaterialTheme.colors.onSurface)
             Text(text = value, style = MaterialTheme.typography.subtitle1, color = MaterialTheme.colors.onSurface)
+        }
+    }
+}
+
+@Composable
+private fun ActionableMetricCard(
+    modifier: Modifier = Modifier,
+    icon: Painter,
+    label: String,
+    value: String,
+    cardAlpha: Float,
+    cornerSize: Dp,
+    elevation: Dp,
+    isEnabled: Boolean,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = modifier.clickable(
+            enabled = isEnabled,
+            onClick = onClick
+        ),
+        backgroundColor = if (isEnabled) 
+            MaterialTheme.colors.primary.copy(alpha = cardAlpha) 
+        else 
+            MaterialTheme.colors.surface.copy(alpha = cardAlpha * 0.7f),
+        shape = RoundedCornerShape(cornerSize),
+        elevation = if (isEnabled) elevation else 0.dp
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.SpaceEvenly,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                painter = icon, 
+                contentDescription = null, 
+                tint = if (isEnabled) 
+                    MaterialTheme.colors.onPrimary 
+                else 
+                    MaterialTheme.colors.onSurface.copy(alpha = 0.6f)
+            )
+            Text(
+                text = label,
+                style = MaterialTheme.typography.caption.copy(
+                    color = if (isEnabled) 
+                        MaterialTheme.colors.onPrimary 
+                    else 
+                        MaterialTheme.colors.onSurface.copy(alpha = 0.6f)
+                )
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.subtitle1.copy(
+                    color = if (isEnabled) 
+                        MaterialTheme.colors.onPrimary 
+                    else 
+                        MaterialTheme.colors.onSurface.copy(alpha = 0.6f)
+                )
+            )
         }
     }
 }

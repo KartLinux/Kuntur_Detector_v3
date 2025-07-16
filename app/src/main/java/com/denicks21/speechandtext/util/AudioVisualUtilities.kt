@@ -24,6 +24,7 @@ class AudioVisualUtilities(private val context: Context) {
     private var isPlaying = false
     
     init {
+        KunturLogger.i("AudioVisualUtilities initialized", "ALARM_SYSTEM")
         setupVibrator()
         setupFlashlight()
     }
@@ -36,24 +37,37 @@ class AudioVisualUtilities(private val context: Context) {
             @Suppress("DEPRECATION")
             context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
         }
+        KunturLogger.d("Vibrator setup completed", "ALARM_SYSTEM")
     }
     
     private fun setupFlashlight() {
         cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
         try {
             cameraId = cameraManager?.cameraIdList?.firstOrNull()
+            KunturLogger.d("Flashlight setup completed, camera ID: $cameraId", "ALARM_SYSTEM")
         } catch (e: Exception) {
+            KunturLogger.e("Failed to setup flashlight", "ALARM_SYSTEM", e)
             e.printStackTrace()
         }
     }
     
     suspend fun startAlarm() = withContext(Dispatchers.Main) {
-        if (isPlaying) return@withContext
+        if (isPlaying) {
+            KunturLogger.w("Alarm already playing, ignoring start request", "ALARM_SYSTEM")
+            return@withContext
+        }
+        
+        KunturLogger.logAlarmEvent("Starting alarm system", "ALARM_SYSTEM")
         isPlaying = true
         
         // Start siren sound
-        mediaPlayer = MediaPlayer.create(context, R.raw.tobeloved).apply {
-            start()
+        try {
+            mediaPlayer = MediaPlayer.create(context, R.raw.tobeloved).apply {
+                start()
+            }
+            KunturLogger.logAlarmEvent("Siren sound started", "ALARM_SYSTEM")
+        } catch (e: Exception) {
+            KunturLogger.e("Failed to start siren sound", "ALARM_SYSTEM", e)
         }
         
         // Start vibration pattern
@@ -64,6 +78,7 @@ class AudioVisualUtilities(private val context: Context) {
     }
     
     fun stopAlarm() {
+        KunturLogger.logAlarmEvent("Stopping alarm system", "ALARM_SYSTEM")
         isPlaying = false
         
         // Stop sound
@@ -74,27 +89,35 @@ class AudioVisualUtilities(private val context: Context) {
             release()
         }
         mediaPlayer = null
+        KunturLogger.logAlarmEvent("Siren sound stopped", "ALARM_SYSTEM")
         
         // Stop vibration
         vibrator?.cancel()
+        KunturLogger.logAlarmEvent("Vibration stopped", "ALARM_SYSTEM")
         
         // Stop flashlight
         stopFlashlight()
     }
     
     private fun startVibration() {
+        KunturLogger.logAlarmEvent("Starting vibration pattern", "ALARM_SYSTEM")
         val pattern = longArrayOf(0, 500, 500, 500, 500, 500, 500) // on/off pattern
         val amplitudes = intArrayOf(0, 255, 0, 255, 0, 255, 0)     // vibration strength
         
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            vibrator?.vibrate(VibrationEffect.createWaveform(pattern, amplitudes, 0))
-        } else {
-            @Suppress("DEPRECATION")
-            vibrator?.vibrate(pattern, 0)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                vibrator?.vibrate(VibrationEffect.createWaveform(pattern, amplitudes, 0))
+            } else {
+                @Suppress("DEPRECATION")
+                vibrator?.vibrate(pattern, 0)
+            }
+        } catch (e: Exception) {
+            KunturLogger.e("Failed to start vibration", "ALARM_SYSTEM", e)
         }
     }
     
     private fun startFlashlight() {
+        KunturLogger.logAlarmEvent("Starting flashlight blinking", "ALARM_SYSTEM")
         flashlightTimer = Timer().apply {
             schedule(object : TimerTask() {
                 override fun run() {
@@ -109,6 +132,7 @@ class AudioVisualUtilities(private val context: Context) {
                             isFlashlightOn = !isFlashlightOn
                         }
                     } catch (e: Exception) {
+                        KunturLogger.e("Error controlling flashlight", "ALARM_SYSTEM", e)
                         e.printStackTrace()
                     }
                 }
@@ -117,6 +141,7 @@ class AudioVisualUtilities(private val context: Context) {
     }
     
     private fun stopFlashlight() {
+        KunturLogger.logAlarmEvent("Stopping flashlight", "ALARM_SYSTEM")
         flashlightTimer?.cancel()
         flashlightTimer = null
         
@@ -126,6 +151,7 @@ class AudioVisualUtilities(private val context: Context) {
                 isFlashlightOn = false
             }
         } catch (e: Exception) {
+            KunturLogger.e("Error stopping flashlight", "ALARM_SYSTEM", e)
             e.printStackTrace()
         }
     }

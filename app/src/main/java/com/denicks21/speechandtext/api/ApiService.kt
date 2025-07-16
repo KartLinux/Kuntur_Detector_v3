@@ -12,7 +12,7 @@ import java.net.URL
 class ApiService {
     companion object {
         private const val API_BASE_URL = "http://192.168.1.70:8000"
-        private const val ANALYSIS_ENDPOINT = "/"
+        private const val ANALYSIS_ENDPOINT = "/analysis"
         private const val ALARM_ENDPOINT = "/alarm"
     }
 

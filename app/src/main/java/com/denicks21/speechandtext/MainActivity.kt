@@ -36,6 +36,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.denicks21.speechandtext.viewmodel.HomeViewModel
 import com.denicks21.speechandtext.viewmodel.SpeechToTextViewModel
+import com.denicks21.speechandtext.util.KunturLogger
 
 /**
  * MainActivity: punto de entrada de la app.
@@ -81,6 +82,8 @@ class MainActivity : ComponentActivity() {
      */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        KunturLogger.i("MainActivity onCreate started", "MAIN_ACTIVITY")
 
         // 1) Verificar y pedir permisos necesarios
         val requiredPermissions = arrayOf(
@@ -89,6 +92,8 @@ class MainActivity : ComponentActivity() {
             //Manifest.permission.FLASHLIGHT
         )
         
+        KunturLogger.d("Checking permissions: ${requiredPermissions.joinToString()}", "MAIN_ACTIVITY")
+        
         // Verificar y solicitar permisos
         requiredPermissions.forEach { permission ->
             if (ContextCompat.checkSelfPermission(
@@ -96,28 +101,37 @@ class MainActivity : ComponentActivity() {
                     permission
                 ) != PackageManager.PERMISSION_GRANTED
             ) {
+                KunturLogger.w("Permission not granted: $permission", "MAIN_ACTIVITY")
                 requestPermissionLauncher.launch(permission)
+            } else {
+                KunturLogger.d("Permission already granted: $permission", "MAIN_ACTIVITY")
             }
         }
 
         // 2) Inicializar el ViewModel
+        KunturLogger.i("Initializing SpeechToTextViewModel", "MAIN_ACTIVITY")
         speechToTextViewModel.initialize(this)
         
         // 3) Configurar el SpeechRecognizer y su listener
+        KunturLogger.i("Setting up SpeechRecognizer", "MAIN_ACTIVITY")
         setupSpeechRecognizer()
 
         // 4) Montar la UI con Jetpack Compose
+        KunturLogger.i("Setting up Compose UI", "MAIN_ACTIVITY")
         setContent {
             AppContent()
         }
 
         // 5) Auto‐guardado periódico: cada 10 segundos, si estamos escuchando y hay texto
+        KunturLogger.i("Starting auto-save coroutine", "MAIN_ACTIVITY")
         lifecycleScope.launch {
             while (isActive) {
                 delay(10_000L)
                 if (listening.value && speechInput.value.isNotBlank()) {
                     val ts = System.currentTimeMillis()
-                    writeFile("Kuntur<3LuisGaona_${ts}.txt", speechInput.value)
+                    val filename = "Kuntur<3LuisGaona_${ts}.txt"
+                    writeFile(filename, speechInput.value)
+                    KunturLogger.d("Auto-saved file: $filename", "MAIN_ACTIVITY")
                     Toast.makeText(
                         this@MainActivity,
                         getString(R.string.toast_auto_saved),
@@ -126,6 +140,7 @@ class MainActivity : ComponentActivity() {
                     
                     // Update ViewModel with the current speech input
                     speechToTextViewModel.updateSpeechInput(speechInput.value)
+                    KunturLogger.logSpeechEvent("Text updated in ViewModel", speechInput.value, "MAIN_ACTIVITY")
                 }
             }
         }
@@ -194,6 +209,7 @@ class MainActivity : ComponentActivity() {
                         ?.firstOrNull()
                         ?.let { hypothesis ->
                             speechInput.value = hypothesis
+                            KunturLogger.logSpeechEvent("Partial result", hypothesis, "SPEECH_RECOGNITION")
                             // Actualiza el ViewModel con el texto parcial
                             speechToTextViewModel.updateSpeechInput(hypothesis)
                         }
@@ -209,6 +225,7 @@ class MainActivity : ComponentActivity() {
                                           else "${speechInput.value} $hypothesis"
                             
                             speechInput.value = newText
+                            KunturLogger.logSpeechEvent("Final result", newText, "SPEECH_RECOGNITION")
                             
                             // Update ViewModel with the new text
                             speechToTextViewModel.updateSpeechInput(newText)
@@ -246,16 +263,20 @@ class MainActivity : ComponentActivity() {
      * Inicia la escucha de voz.
      */
     fun startListening() {
+        KunturLogger.logUIAction("Start Listening pressed", "MAIN_ACTIVITY")
         listening.value = true
         speechRecognizer.startListening(recognizerIntent)
+        KunturLogger.logSpeechEvent("Speech recognition started", "", "MAIN_ACTIVITY")
     }
 
     /**
      * Detiene la escucha de voz.
      */
     fun stopListening() {
+        KunturLogger.logUIAction("Stop Listening pressed", "MAIN_ACTIVITY")
         listening.value = false
         speechRecognizer.stopListening()
+        KunturLogger.logSpeechEvent("Speech recognition stopped", "", "MAIN_ACTIVITY")
     }
 
     /**
