@@ -19,3 +19,8 @@ data class AlarmNotificationRequest(
     val timestamp: String,
     val videoUrl: String
 )
+// en algún archivo común como models/VideoFile.kt
+data class VideoFile(
+    val uri: String,
+    val name: String
+)

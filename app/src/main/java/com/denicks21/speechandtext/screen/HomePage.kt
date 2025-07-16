@@ -28,6 +28,7 @@ import com.denicks21.speechandtext.ui.composables.AnalysisButton
 import com.denicks21.speechandtext.ui.composables.ModeSelectionCard
 import com.denicks21.speechandtext.viewmodel.Incident
 import com.denicks21.speechandtext.util.KunturLogger
+import com.denicks21.speechandtext.api.ThreatAnalysisResponse
 import kotlinx.coroutines.flow.StateFlow
 import kotlin.math.roundToInt
 
@@ -56,12 +57,43 @@ fun HomePage(
     speechInputFlow: MutableState<String>,
     isListening: Boolean,
     isManualMode: Boolean,
+    threatAnalysisResponse: ThreatAnalysisResponse? = null,
     onToggleListening: () -> Unit,
     onModeChange: (Boolean) -> Unit,
     onAnalyzeClicked: () -> Unit,
 ) {
     // Lectura reactiva del texto transcrito
     val speechInput by speechInputFlow
+
+    // Función para limpiar repeticiones en el texto
+    fun cleanRepeatedText(text: String): String {
+        if (text.isBlank()) return text
+
+        val words = text.trim().split("\\s+".toRegex())
+        if (words.size <= 1) return text
+
+        val cleanedWords = mutableListOf<String>()
+        var i = 0
+
+        while (i < words.size) {
+            val currentWord = words[i]
+            cleanedWords.add(currentWord)
+
+            // Buscar repeticiones consecutivas de la misma palabra
+            var j = i + 1
+            while (j < words.size && words[j].equals(currentWord, ignoreCase = true)) {
+                j++
+            }
+
+            // Si encontramos repeticiones, saltar todas excepto la primera
+            i = j
+        }
+
+        return cleanedWords.joinToString(" ")
+    }
+
+    // Texto limpio sin repeticiones
+    val cleanSpeechInput = cleanRepeatedText(speechInput)
 
     // Con BoxWithConstraints leemos el alto real disponible
     BoxWithConstraints(
@@ -183,21 +215,38 @@ fun HomePage(
                     onModeChange(newMode)
                 }
             )
-            
+
             Spacer(modifier = Modifier.height(8.dp))
-            
+
             // — Texto transcrito —
-            Text(
-                text = if (speechInput.isNotBlank()) speechInput else "Aquí aparecerá tu texto...",
-                style = MaterialTheme.typography.body1,
-                color = MaterialTheme.colors.onSurface,
+            Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-            )
-            
+                    .padding(horizontal = 16.dp),
+                backgroundColor = MaterialTheme.colors.surface.copy(alpha = 0.9f),
+                shape = RoundedCornerShape(12.dp),
+                elevation = 2.dp
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Text(
+                        text = "Transcripción de Audio:",
+                        style = MaterialTheme.typography.subtitle2,
+                        color = MaterialTheme.colors.primary,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    Text(
+                        text = if (cleanSpeechInput.isNotBlank()) cleanSpeechInput else "Aquí aparecerá tu texto...",
+                        style = MaterialTheme.typography.body1,
+                        color = MaterialTheme.colors.onSurface,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+
             Spacer(modifier = Modifier.height(8.dp))
-            
+
             // — Botón de análisis (solo visible en modo manual) —
             if (isManualMode) {
                 AnalysisButton(
@@ -205,7 +254,7 @@ fun HomePage(
                         KunturLogger.logUIAction("Manual Analysis button pressed", "HOME_PAGE")
                         onAnalyzeClicked()
                     },
-                    enabled = speechInput.isNotBlank()
+                    enabled = cleanSpeechInput.isNotBlank()
                 )
             }
         }
@@ -229,10 +278,10 @@ fun HomePage(
                     icon = painterResource(id = R.drawable.ic_notification),
                     label = "ALERTAR",
                     value = "Activar alarma",
-                    cardAlpha = if (speechInput.isNotBlank()) METRIC_CARD_ALPHA + 0.5f else METRIC_CARD_ALPHA,
+                    cardAlpha = if (cleanSpeechInput.isNotBlank()) METRIC_CARD_ALPHA + 0.5f else METRIC_CARD_ALPHA,
                     cornerSize = METRIC_CARD_CORNER,
-                    elevation = if (speechInput.isNotBlank()) 3.dp else 0.dp,
-                    isEnabled = speechInput.isNotBlank(),
+                    elevation = if (cleanSpeechInput.isNotBlank()) 3.dp else 0.dp,
+                    isEnabled = cleanSpeechInput.isNotBlank(),
                     onClick = {
                         KunturLogger.logUIAction("ALERT button pressed in manual mode", "HOME_PAGE")
                         onAnalyzeClicked()
@@ -253,17 +302,15 @@ fun HomePage(
                 )
             }
 
-            // Por ejemplo, muestra el número de incidencias en un MetricCard
-            MetricCard(
-                modifier   = Modifier
+            // Respuesta del servidor de análisis de amenazas
+            ThreatAnalysisCard(
+                modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight(),
-                icon       = painterResource(id = R.drawable.ic_chart),
-                label = "Incidencias",
-                value = "0%",
-                cardAlpha  = METRIC_CARD_ALPHA,
+                threatAnalysis = threatAnalysisResponse,
+                cardAlpha = METRIC_CARD_ALPHA,
                 cornerSize = METRIC_CARD_CORNER,
-                elevation  = 0.dp
+                elevation = if (threatAnalysisResponse != null) 2.dp else 0.dp
             )
 
         }
@@ -317,9 +364,9 @@ private fun ActionableMetricCard(
             enabled = isEnabled,
             onClick = onClick
         ),
-        backgroundColor = if (isEnabled) 
-            MaterialTheme.colors.primary.copy(alpha = cardAlpha) 
-        else 
+        backgroundColor = if (isEnabled)
+            MaterialTheme.colors.primary.copy(alpha = cardAlpha)
+        else
             MaterialTheme.colors.surface.copy(alpha = cardAlpha * 0.7f),
         shape = RoundedCornerShape(cornerSize),
         elevation = if (isEnabled) elevation else 0.dp
@@ -332,34 +379,118 @@ private fun ActionableMetricCard(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Icon(
-                painter = icon, 
-                contentDescription = null, 
-                tint = if (isEnabled) 
-                    MaterialTheme.colors.onPrimary 
-                else 
+                painter = icon,
+                contentDescription = null,
+                tint = if (isEnabled)
+                    MaterialTheme.colors.onPrimary
+                else
                     MaterialTheme.colors.onSurface.copy(alpha = 0.6f)
             )
             Text(
                 text = label,
                 style = MaterialTheme.typography.caption.copy(
-                    color = if (isEnabled) 
-                        MaterialTheme.colors.onPrimary 
-                    else 
+                    color = if (isEnabled)
+                        MaterialTheme.colors.onPrimary
+                    else
                         MaterialTheme.colors.onSurface.copy(alpha = 0.6f)
                 )
             )
             Text(
                 text = value,
                 style = MaterialTheme.typography.subtitle1.copy(
-                    color = if (isEnabled) 
-                        MaterialTheme.colors.onPrimary 
-                    else 
+                    color = if (isEnabled)
+                        MaterialTheme.colors.onPrimary
+                    else
                         MaterialTheme.colors.onSurface.copy(alpha = 0.6f)
                 )
             )
         }
     }
 }
+
+@Composable
+private fun ThreatAnalysisCard(
+    modifier: Modifier = Modifier,
+    threatAnalysis: ThreatAnalysisResponse?,
+    cardAlpha: Float,
+    cornerSize: Dp,
+    elevation: Dp
+) {
+    val isThreat = threatAnalysis?.is_threat?.equals("SI", ignoreCase = true) == true
+
+    Card(
+        modifier = modifier,
+        backgroundColor = when {
+            threatAnalysis == null -> MaterialTheme.colors.surface.copy(alpha = cardAlpha)
+            isThreat -> MaterialTheme.colors.error.copy(alpha = cardAlpha + 0.3f)
+            else -> MaterialTheme.colors.surface.copy(alpha = cardAlpha + 0.2f)
+        },
+        shape = RoundedCornerShape(cornerSize),
+        elevation = elevation
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.SpaceEvenly,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            if (threatAnalysis != null) {
+                // Icono basado en si es amenaza o no
+                Icon(
+                    painter = painterResource(
+                        id = if (isThreat)
+                            R.drawable.ic_notification
+                        else
+                            android.R.drawable.ic_dialog_info
+                    ),
+                    contentDescription = null,
+                    tint = if (isThreat)
+                        Color.Red
+                    else
+                        Color.Green
+                )
+
+                // Palabra clave
+                Text(
+                    text = "Palabra:",
+                    style = MaterialTheme.typography.caption,
+                    color = MaterialTheme.colors.onSurface
+                )
+                Text(
+                    text = threatAnalysis.keyword.ifEmpty { "N/A" },
+                    style = MaterialTheme.typography.subtitle2,
+                    color = MaterialTheme.colors.onSurface,
+                    textAlign = TextAlign.Center
+                )
+
+                // Estado de amenaza
+                Text(
+                    text = if (isThreat) "AMENAZA" else "SEGURO",
+                    style = MaterialTheme.typography.caption,
+                    color = if (isThreat) Color.Red else Color.Green
+                )
+            } else {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_chart),
+                    contentDescription = null,
+                    tint = MaterialTheme.colors.onSurface.copy(alpha = 0.6f)
+                )
+                Text(
+                    text = "Análisis",
+                    style = MaterialTheme.typography.caption,
+                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.6f)
+                )
+                Text(
+                    text = "Pendiente",
+                    style = MaterialTheme.typography.subtitle1,
+                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.6f)
+                )
+            }
+        }
+    }
+}
+
 
 
 

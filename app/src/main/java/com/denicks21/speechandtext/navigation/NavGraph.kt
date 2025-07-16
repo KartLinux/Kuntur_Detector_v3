@@ -9,6 +9,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -18,6 +19,7 @@ import com.denicks21.speechandtext.ui.camera.CameraPreviewScreen
 import com.denicks21.speechandtext.ui.composables.AppBottomBar
 import com.denicks21.speechandtext.ui.composables.AppTopBar
 import com.denicks21.speechandtext.viewmodel.SpeechToTextViewModel
+import com.denicks21.speechandtext.viewmodel.VideoViewModel
 
 @Composable
 fun NavGraph(
@@ -28,6 +30,8 @@ fun NavGraph(
     stopListening:    () -> Unit,
     viewModel: SpeechToTextViewModel
 ) {
+    val videoViewModel: VideoViewModel = viewModel(LocalContext.current as MainActivity)
+
     Scaffold(
         topBar    = { AppTopBar() },
         bottomBar = { AppBottomBar(navController) }
@@ -79,6 +83,7 @@ fun NavGraph(
                     CameraPreviewScreen(
                         navController = navController,
                         threatAnalysis = threatAnalysis,
+                        videoViewModel = videoViewModel, // ✅ PASO CLAVE
                         onStopRecording = {
                             viewModel.stopAlarm()
                             navController.navigate(NavScreens.HomePage.route)
@@ -86,7 +91,7 @@ fun NavGraph(
                     )
                 }
                 composable(NavScreens.MapPage.route) {
-                    MapPage(navController)
+                    MapPage(navController, videoViewModel = videoViewModel)
                 }
             }
         }

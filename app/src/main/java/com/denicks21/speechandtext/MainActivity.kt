@@ -36,6 +36,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.denicks21.speechandtext.viewmodel.HomeViewModel
 import com.denicks21.speechandtext.viewmodel.SpeechToTextViewModel
+import com.denicks21.speechandtext.viewmodel.VideoViewModel
 import com.denicks21.speechandtext.util.KunturLogger
 
 /**
@@ -53,6 +54,9 @@ class MainActivity : ComponentActivity() {
 
     /** ViewModel para el análisis de voz a texto y detección de amenazas */
     private val speechToTextViewModel by viewModels<SpeechToTextViewModel> { SpeechToTextViewModel.Factory() }
+
+    /** ViewModel para gestión de videos grabados */
+    val videoViewModel by viewModels<VideoViewModel>()
 
     /** Instancia de SpeechRecognizer para procesar audio a texto. */
     private lateinit var speechRecognizer: SpeechRecognizer

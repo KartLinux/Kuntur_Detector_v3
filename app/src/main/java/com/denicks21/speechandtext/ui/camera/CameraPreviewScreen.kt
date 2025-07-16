@@ -43,9 +43,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.denicks21.speechandtext.api.ThreatAnalysisResponse
 import com.denicks21.speechandtext.util.KunturLogger
+import com.denicks21.speechandtext.viewmodel.VideoViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberPermissionState
 import kotlinx.coroutines.delay
@@ -62,19 +64,21 @@ import kotlin.coroutines.suspendCoroutine
 fun CameraPreviewScreen(
     navController: NavHostController,
     threatAnalysis: ThreatAnalysisResponse? = null,
-    onStopRecording: () -> Unit = {}
+    onStopRecording: () -> Unit = {},
+    videoViewModel: VideoViewModel, // ✅ Parámetro del ViewModel
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
-    
+    var activeRecording: Recording? by remember { mutableStateOf(null) }
+
     // States
     var isRecording by remember { mutableStateOf(false) }
     var videoUri by remember { mutableStateOf<String?>(null) }
     var elapsedTime by remember { mutableStateOf(0) }
     var recordingComplete by remember { mutableStateOf(false) }
     var showThreatInfo by remember { mutableStateOf(false) }
-    
+
     // Permission state
     val cameraPermissionState = rememberPermissionState(Manifest.permission.CAMERA)
     
@@ -115,10 +119,12 @@ fun CameraPreviewScreen(
         }
         
         // Stop recording after 20 seconds
+        activeRecording?.stop() // 🔁 Esto finaliza la grabación
+        activeRecording = null
         isRecording = false
         recordingComplete = true
         KunturLogger.logCameraEvent("Recording completed after 20 seconds", "CAMERA_SCREEN")
-        
+
         // Return to previous screen after recording completes
         delay(3000)
         KunturLogger.logNavigationEvent("CameraScreen", "HomePage", "CAMERA_SCREEN")
@@ -211,7 +217,7 @@ fun CameraPreviewScreen(
                                         }
                                         
                                         // Iniciar grabación
-                                        val recording: Recording = pendingRecording.start(
+                                        activeRecording = pendingRecording.start(
                                             ContextCompat.getMainExecutor(context)
                                         ) { recordEvent: VideoRecordEvent ->
                                             when (recordEvent) {
@@ -220,18 +226,27 @@ fun CameraPreviewScreen(
                                                 }
                                                 is VideoRecordEvent.Finalize -> {
                                                     if (recordEvent.hasError()) {
+                                                        KunturLogger.logError("Video capture failed: ${recordEvent.error}", "CAMERA_SCREEN")
                                                         Log.e("CameraScreen", "Video capture failed: ${recordEvent.error}")
                                                     } else {
                                                         videoUri = recordEvent.outputResults.outputUri.toString()
+                                                        KunturLogger.logCameraEvent("Video capture succeeded: $videoUri", "CAMERA_SCREEN")
                                                         Log.d("CameraScreen", "Video capture succeeded: $videoUri")
+                                                        
+                                                        // Guardar video en ViewModel
+                                                        videoUri?.let { uri ->
+                                                            KunturLogger.d("Guardando video en ViewModel: $uri", "CAMERA_SCREEN")
+                                                            videoViewModel.addVideo(uri)
+                                                            KunturLogger.logCameraEvent("Video saved to ViewModel successfully", "CAMERA_SCREEN")
+                                                        }
                                                     }
                                                     isRecording = false
+                                                    activeRecording = null  // ✅ Limpiar la referencia
                                                 }
-                                                else -> {
-                                                    // Handle other events if needed
-                                                }
+                                                else -> {}
                                             }
                                         }
+
                                     } catch (e: Exception) {
                                         Log.e("CameraScreen", "Video recording failed", e)
                                     }
@@ -475,6 +490,7 @@ fun CameraPreviewScreen(
         FloatingActionButton(
             onClick = {
                 KunturLogger.logUIAction("Stop recording button pressed", "CAMERA_SCREEN")
+                activeRecording?.stop()  // ✅ Detener correctamente
                 isRecording = false
                 onStopRecording()
             },

@@ -61,4 +61,8 @@ object KunturLogger {
     fun logNavigationEvent(from: String, to: String, component: String = "NAVIGATION") {
         i("NAVIGATION: $from -> $to", component)
     }
+
+    fun logError(s: String, s1: String) {
+        e("NAVIGATION: $s -> $", s1)
+    }
 }
