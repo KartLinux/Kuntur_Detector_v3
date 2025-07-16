@@ -1,0 +1,17 @@
+<resources>
+    <string name="prompt_talk">Habla…</string>
+    <string name="auto_filename_prefix">auto_</string>
+    <string name="manual_filename_prefix">manual_</string>
+    <string name="toast_auto_saved">Texto auto-guardado</string>
+    <string name="toast_saved">Texto guardado</string>
+    <string name="toast_no_text">Texto no guardado</string>
+    <string name="title_speech_to_text">Speech to Text</string>
+    <string name="cd_back">Volver</string>
+    <string name="cd_start_listening">Iniciar escucha</string>
+    <string name="cd_stop_listening">Detener escucha</string>
+    <string name="cd_save">Guardar ahora</string>
+    <string name="app_name">MIJIN</string>
+    <string name="placeholder_speech">Aquí aparecerá tu transcripción...</string>
+
+</resources>
+
