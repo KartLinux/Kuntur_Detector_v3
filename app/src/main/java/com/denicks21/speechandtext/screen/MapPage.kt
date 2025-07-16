@@ -26,6 +26,12 @@ import java.util.*
 fun MapPage(navController: NavHostController, videoViewModel: VideoViewModel) {
     val videos = videoViewModel.videos
     val context = LocalContext.current
+    
+    // Debug: Log videos on every recomposition
+    KunturLogger.d("MapPage recomposed - Total videos: ${videos.size}", "MAP_PAGE")
+    videos.forEachIndexed { index, video ->
+        KunturLogger.d("Video $index: ${video.name} - ${video.uri}", "MAP_PAGE")
+    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -59,6 +65,20 @@ fun MapPage(navController: NavHostController, videoViewModel: VideoViewModel) {
                         color = MaterialTheme.colors.onPrimary.copy(alpha = 0.8f)
                     )
                 }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Botón de test para debugging
+            Button(
+                onClick = {
+                    KunturLogger.d("Test button pressed - Adding dummy video", "MAP_PAGE")
+                    val testUri = "content://media/external/video/media/test_${System.currentTimeMillis()}"
+                    videoViewModel.addVideo(testUri)
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("🧪 Test: Agregar Video Ficticio")
             }
 
             Spacer(modifier = Modifier.height(16.dp))

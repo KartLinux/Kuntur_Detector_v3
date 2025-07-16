@@ -9,6 +9,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -23,12 +26,13 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
-import com.denicks21.speechandtext.ui.composables.AnalysisButton
 import com.denicks21.speechandtext.ui.composables.ModeSelectionCard
 import com.denicks21.speechandtext.viewmodel.Incident
 import com.denicks21.speechandtext.util.KunturLogger
 import com.denicks21.speechandtext.api.ThreatAnalysisResponse
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import kotlin.math.roundToInt
 
@@ -38,7 +42,7 @@ import kotlin.math.roundToInt
 // -----------------------
 
 // Niveles de transparencia
-private const val MAIN_CARD_ALPHA = 0.3f
+const val MAIN_CARD_ALPHA = 0.3f
 private const val METRIC_CARD_ALPHA = 0.3f
 
 // Radios redondeados
@@ -94,6 +98,35 @@ fun HomePage(
 
     // Texto limpio sin repeticiones
     val cleanSpeechInput = cleanRepeatedText(speechInput)
+    
+    // Estado para el texto en tiempo real (últimas 3 frases)
+    val realTimeText = remember { mutableStateOf("") }
+    
+    // Función para mantener solo las últimas frases
+    fun updateRealTimeText(newText: String) {
+        if (newText.isBlank()) {
+            realTimeText.value = ""
+            return
+        }
+        
+        // Dividir en frases (por puntos, signos de exclamación, interrogación)
+        val sentences = newText.split(Regex("[.!?]+")).filter { it.isNotBlank() }
+        
+        // Mantener solo las últimas 3 frases
+        val lastSentences = sentences.takeLast(3)
+        realTimeText.value = lastSentences.joinToString(". ").trim()
+    }
+    
+    // Auto-borrado del texto en tiempo real (cada 10 segundos)
+    LaunchedEffect(cleanSpeechInput) {
+        updateRealTimeText(cleanSpeechInput)
+        
+        // Si hay texto, programar borrado automático después de 10 segundos de inactividad
+        if (cleanSpeechInput.isNotBlank()) {
+            delay(10_000) // 10 segundos
+            realTimeText.value = ""
+        }
+    }
 
     // Con BoxWithConstraints leemos el alto real disponible
     BoxWithConstraints(
@@ -107,17 +140,17 @@ fun HomePage(
                     )
                 )
             )
-            .padding(16.dp)
+            .padding(12.dp)
     ) {
         val screenHeight = maxHeight
-        val mainCardMaxHeight = screenHeight * 0.45f    // hasta 40% de la pantalla
-        val metricRowHeight   = screenHeight * 0.25f   // 15% para la fila de métricas
+        val mainCardMaxHeight = screenHeight * 0.30f    // reducido a 30% de la pantalla
+        val metricRowHeight   = screenHeight * 0.20f   // reducido a 20% para la fila de métricas
 
         // Contenido desplazable, con padding bottom para no quedar oculto
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(bottom = metricRowHeight + 22.dp) // evita overlape con métricas
+                .padding(bottom = metricRowHeight + 16.dp) // reducido padding
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.CenterHorizontally
@@ -125,7 +158,7 @@ fun HomePage(
             // — Ubicación —
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(top = 16.dp, bottom = 0.dp)
+                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp) // reducido padding
             ) {
                 Icon(
                     painter = painterResource(id = R.drawable.ic_ubication),
@@ -153,7 +186,7 @@ fun HomePage(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(24.dp),
+                        .padding(16.dp), // reducido padding
                     verticalArrangement = Arrangement.SpaceBetween,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
@@ -162,7 +195,7 @@ fun HomePage(
                             id = if (isListening) R.drawable.ic_kuntur_on else R.drawable.ic_kuntur_off
                         ),
                         contentDescription = null,
-                        modifier = Modifier.size(64.dp),
+                        modifier = Modifier.size(48.dp), // reducido tamaño
                         tint = Color.Unspecified
                     )
 
@@ -170,12 +203,12 @@ fun HomePage(
                     val statusColor = if (isListening) Color.Green else Color.Red
                     Text(
                         text = statusText,
-                        style = MaterialTheme.typography.h6,
+                        style = MaterialTheme.typography.subtitle1, // cambiado de h6 a subtitle1
                         color = statusColor,
                         textAlign = TextAlign.Center,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 8.dp)
+                            .padding(vertical = 4.dp) // reducido padding
                     )
 
                     IconButton(
@@ -187,7 +220,7 @@ fun HomePage(
                             onToggleListening()
                         },
                         modifier = Modifier
-                            .size(128.dp)
+                            .size(80.dp) // reducido tamaño
                             .background(Color.Transparent, CircleShape)
                     ) {
                         Icon(
@@ -202,7 +235,7 @@ fun HomePage(
                 }
             }
 
-            Spacer(modifier = Modifier.height(0.dp))
+            Spacer(modifier = Modifier.height(6.dp)) // reducido espaciado
 
             // — Modo de operación (nuevo) —
             ModeSelectionCard(
@@ -216,47 +249,56 @@ fun HomePage(
                 }
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(1.dp))
 
-            // — Texto transcrito —
+            // — Texto transcrito completo —
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                backgroundColor = MaterialTheme.colors.surface.copy(alpha = 0.9f),
-                shape = RoundedCornerShape(12.dp),
-                elevation = 2.dp
+                    .padding(horizontal = 10.dp),
+                backgroundColor = MaterialTheme.colors.surface.copy(alpha = 0.1f),
+                shape = RoundedCornerShape(8.dp),
+                elevation = 0.dp
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp)
+                    modifier = Modifier.padding(4.dp)
                 ) {
-                    Text(
-                        text = "Transcripción de Audio:",
-                        style = MaterialTheme.typography.subtitle2,
-                        color = MaterialTheme.colors.primary,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                    Text(
-                        text = if (cleanSpeechInput.isNotBlank()) cleanSpeechInput else "Aquí aparecerá tu texto...",
-                        style = MaterialTheme.typography.body1,
-                        color = MaterialTheme.colors.onSurface,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                            .padding(horizontal = 4.dp, vertical = 4.dp) // reducido padding
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_chart),
+                            contentDescription = "Transcripción",
+                            tint = MaterialTheme.colors.secondary,
+                            modifier = Modifier.size(10.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Transcripción:",
+                            style = MaterialTheme.typography.caption,
+                            color = MaterialTheme.colors.secondary,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                    
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                    ) {
+                        Text(
+                            text = if (cleanSpeechInput.isNotBlank()) cleanSpeechInput else "Kuntur a la acción...",
+                            style = MaterialTheme.typography.body2,
+                            color = MaterialTheme.colors.onSurface,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // — Botón de análisis (solo visible en modo manual) —
-            if (isManualMode) {
-                AnalysisButton(
-                    onClick = {
-                        KunturLogger.logUIAction("Manual Analysis button pressed", "HOME_PAGE")
-                        onAnalyzeClicked()
-                    },
-                    enabled = cleanSpeechInput.isNotBlank()
-                )
-            }
+            Spacer(modifier = Modifier.height(1.dp))
         }
 
         // — Métricas fijas al fondo —
@@ -266,7 +308,7 @@ fun HomePage(
                 .height(metricRowHeight)
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 0.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+            horizontalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             // Botón de alerta en modo manual o card informativa en modo automático
             if (isManualMode) {
@@ -275,10 +317,10 @@ fun HomePage(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight(),
-                    icon = painterResource(id = R.drawable.ic_notification),
+                    icon = painterResource(id = android.R.drawable.ic_menu_send),
                     label = "ALERTAR",
-                    value = "Activar alarma",
-                    cardAlpha = if (cleanSpeechInput.isNotBlank()) METRIC_CARD_ALPHA + 0.5f else METRIC_CARD_ALPHA,
+                    value = "Enviar análisis",
+                    cardAlpha = if (cleanSpeechInput.isNotBlank()) METRIC_CARD_ALPHA+ 0.5f else METRIC_CARD_ALPHA ,
                     cornerSize = METRIC_CARD_CORNER,
                     elevation = if (cleanSpeechInput.isNotBlank()) 3.dp else 0.dp,
                     isEnabled = cleanSpeechInput.isNotBlank(),
@@ -292,10 +334,11 @@ fun HomePage(
                 MetricCard(
                     modifier = Modifier
                         .weight(1f)
-                        .fillMaxHeight(),
+                        .fillMaxHeight()
+                        .size(LOCATION_ICON_SIZE),
                     icon = painterResource(id = R.drawable.ic_notification),
-                    label = "Alerta desabilitada",
-                    value = "no",
+                    label = "No aviable",
+                    value = "Alerta desabilitada",
                     cardAlpha = METRIC_CARD_ALPHA,
                     cornerSize = METRIC_CARD_CORNER,
                     elevation = 0.dp
@@ -365,9 +408,9 @@ private fun ActionableMetricCard(
             onClick = onClick
         ),
         backgroundColor = if (isEnabled)
-            MaterialTheme.colors.primary.copy(alpha = cardAlpha)
+            MaterialTheme.colors.primary.copy(alpha = cardAlpha+ 0.2f)
         else
-            MaterialTheme.colors.surface.copy(alpha = cardAlpha * 0.7f),
+            MaterialTheme.colors.surface.copy(alpha = cardAlpha),
         shape = RoundedCornerShape(cornerSize),
         elevation = if (isEnabled) elevation else 0.dp
     ) {
@@ -382,26 +425,26 @@ private fun ActionableMetricCard(
                 painter = icon,
                 contentDescription = null,
                 tint = if (isEnabled)
-                    MaterialTheme.colors.onPrimary
+                    MaterialTheme.colors.onSurface
                 else
-                    MaterialTheme.colors.onSurface.copy(alpha = 0.6f)
+                    MaterialTheme.colors.onPrimary.copy(alpha = 1f)
             )
             Text(
                 text = label,
                 style = MaterialTheme.typography.caption.copy(
                     color = if (isEnabled)
-                        MaterialTheme.colors.onPrimary
+                        MaterialTheme.colors.onSurface
                     else
-                        MaterialTheme.colors.onSurface.copy(alpha = 0.6f)
+                        MaterialTheme.colors.onPrimary.copy(alpha = 0.6f)
                 )
             )
             Text(
                 text = value,
                 style = MaterialTheme.typography.subtitle1.copy(
                     color = if (isEnabled)
-                        MaterialTheme.colors.onPrimary
+                        MaterialTheme.colors.onSurface
                     else
-                        MaterialTheme.colors.onSurface.copy(alpha = 0.6f)
+                        MaterialTheme.colors.onPrimary.copy(alpha = 0.6f)
                 )
             )
         }
@@ -431,7 +474,7 @@ private fun ThreatAnalysisCard(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(12.dp),
+                .padding(4.dp),
             verticalArrangement = Arrangement.SpaceEvenly,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -453,28 +496,28 @@ private fun ThreatAnalysisCard(
 
                 // Palabra clave
                 Text(
-                    text = "Palabra:",
+                    text = "Estado:",
                     style = MaterialTheme.typography.caption,
                     color = MaterialTheme.colors.onSurface
                 )
                 Text(
-                    text = threatAnalysis.keyword.ifEmpty { "N/A" },
+                    text = if (isThreat) "AMENAZA" else "SEGURO",
                     style = MaterialTheme.typography.subtitle2,
-                    color = MaterialTheme.colors.onSurface,
+                    color = if (isThreat) Color.Red else Color.Green,
                     textAlign = TextAlign.Center
                 )
 
                 // Estado de amenaza
                 Text(
-                    text = if (isThreat) "AMENAZA" else "SEGURO",
+                    text = threatAnalysis.keyword.ifEmpty { "N/A" },
                     style = MaterialTheme.typography.caption,
-                    color = if (isThreat) Color.Red else Color.Green
+                    color = MaterialTheme.colors.onSurface,
                 )
             } else {
                 Icon(
                     painter = painterResource(id = R.drawable.ic_chart),
                     contentDescription = null,
-                    tint = MaterialTheme.colors.onSurface.copy(alpha = 0.6f)
+                    tint = MaterialTheme.colors.onSurface.copy(alpha = 0.9f)
                 )
                 Text(
                     text = "Análisis",

@@ -18,6 +18,7 @@ import com.denicks21.speechandtext.screen.*
 import com.denicks21.speechandtext.ui.camera.CameraPreviewScreen
 import com.denicks21.speechandtext.ui.composables.AppBottomBar
 import com.denicks21.speechandtext.ui.composables.AppTopBar
+import com.denicks21.speechandtext.util.KunturLogger
 import com.denicks21.speechandtext.viewmodel.SpeechToTextViewModel
 import com.denicks21.speechandtext.viewmodel.VideoViewModel
 
@@ -31,6 +32,9 @@ fun NavGraph(
     viewModel: SpeechToTextViewModel
 ) {
     val videoViewModel: VideoViewModel = viewModel(LocalContext.current as MainActivity)
+    
+    // Debug: Log video count on navigation changes
+    KunturLogger.d("NavGraph - VideoViewModel has ${videoViewModel.videos.size} videos", "NAV_GRAPH")
 
     Scaffold(
         topBar    = { AppTopBar() },
@@ -47,10 +51,13 @@ fun NavGraph(
                 composable(NavScreens.HomePage.route) {
                     // ▶ quien sí conoce el ViewModel lo inyecta aquí:
                     val vm: MainActivity = (LocalContext.current as MainActivity)
+                    val threatAnalysis by viewModel.threatAnalysis.collectAsState()
+                    
                     HomePage(
                         speechInputFlow = vm.speechInput,
                         isListening = listeningState.value,
                         isManualMode = viewModel.isManualMode,
+                        threatAnalysisResponse = threatAnalysis, // ✅ PASAR LA RESPUESTA DE AMENAZA
                         onToggleListening = {
                             if (listeningState.value) stopListening() else startListening()
                         },

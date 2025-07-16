@@ -1,6 +1,7 @@
 package com.denicks21.speechandtext.ui.composables
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -16,6 +17,8 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.denicks21.speechandtext.navigation.NavScreens
+import com.denicks21.speechandtext.screen.MAIN_CARD_ALPHA
+
 
 
 @Composable
@@ -26,8 +29,10 @@ fun ModeSelectionCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp),
-        elevation = 4.dp
+            .padding(10.dp),
+        elevation = 0.dp,
+        backgroundColor = MaterialTheme.colors.surface.copy(alpha = MAIN_CARD_ALPHA),
+        shape = RoundedCornerShape(8.dp), // reducido corner radius
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
@@ -35,7 +40,7 @@ fun ModeSelectionCard(
                 style = MaterialTheme.typography.subtitle1
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(0.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -57,7 +62,7 @@ fun ModeSelectionCard(
                 )
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(0.dp))
 
             Text(
                 text = if (isManualMode)
@@ -70,18 +75,3 @@ fun ModeSelectionCard(
     }
 }
 
-@Composable
-fun AnalysisButton(
-    onClick: () -> Unit,
-    enabled: Boolean = true
-) {
-    Button(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-    ) {
-        Text(text = "Analizar texto")
-    }
-}
