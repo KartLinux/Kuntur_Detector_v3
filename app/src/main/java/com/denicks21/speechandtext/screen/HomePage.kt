@@ -26,12 +26,14 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import com.denicks21.speechandtext.ui.composables.ModeSelectionCard
 import com.denicks21.speechandtext.viewmodel.Incident
 import com.denicks21.speechandtext.util.KunturLogger
 import com.denicks21.speechandtext.api.ThreatAnalysisResponse
+import com.denicks21.speechandtext.util.rememberUserLocation
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import kotlin.math.roundToInt
@@ -53,7 +55,8 @@ private val METRIC_CARD_CORNER = 12.dp
 private val LOCATION_ICON_SIZE = 20.dp
 private val LOCATION_SPACING = 8.dp
 
-private fun getFakeLocation(): String = "Loja, Chaguarpamba, Ecuador"
+// Estado global para la ubicación
+private fun getDefaultLocation(): String = "Loja, Chaguarpamba, Ecuador"
 // -----------------------
 
 @Composable
@@ -116,7 +119,10 @@ fun HomePage(
         val lastSentences = sentences.takeLast(3)
         realTimeText.value = lastSentences.joinToString(". ").trim()
     }
-    
+    // Obtener la ubicación del usuario
+    val context = LocalContext.current
+    val locationText by rememberUserLocation(context)
+
     // Auto-borrado del texto en tiempo real (cada 10 segundos)
     LaunchedEffect(cleanSpeechInput) {
         updateRealTimeText(cleanSpeechInput)
@@ -168,7 +174,7 @@ fun HomePage(
                 )
                 Spacer(modifier = Modifier.width(LOCATION_SPACING))
                 Text(
-                    text = getFakeLocation(),
+                    text = locationText,
                     style = MaterialTheme.typography.overline,
                     color = MaterialTheme.colors.onPrimary
                 )
@@ -338,7 +344,7 @@ fun HomePage(
                         .size(LOCATION_ICON_SIZE),
                     icon = painterResource(id = R.drawable.ic_notification),
                     label = "No aviable",
-                    value = "Alerta desabilitada",
+                    value = "Alertas",
                     cardAlpha = METRIC_CARD_ALPHA,
                     cornerSize = METRIC_CARD_CORNER,
                     elevation = 0.dp

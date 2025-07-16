@@ -65,4 +65,12 @@ object KunturLogger {
     fun logError(s: String, s1: String) {
         e("NAVIGATION: $s -> $", s1)
     }
+
+    fun logInfo(s: String, s1: String) {
+        i("NAVIGATION: $s -> $", s1)
+    }
+
+    fun logWarning(s: String, s1: String) {
+        w("NAVIGATION: $s -> $", s1)
+    }
 }

@@ -1,26 +1,14 @@
 package com.denicks21.speechandtext.ui.composables
-
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
-import androidx.navigation.NavDestination.Companion.hierarchy
-import androidx.navigation.NavGraph.Companion.findStartDestination
-import androidx.navigation.compose.currentBackStackEntryAsState
-import com.denicks21.speechandtext.navigation.NavScreens
 import com.denicks21.speechandtext.screen.MAIN_CARD_ALPHA
 
-
-
+// -----------------------
 @Composable
 fun ModeSelectionCard(
     isManualMode: Boolean,
@@ -74,4 +62,7 @@ fun ModeSelectionCard(
         }
     }
 }
+
+
+
 
