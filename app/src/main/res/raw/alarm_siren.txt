@@ -1,0 +1,3 @@
+# Este archivo es un placeholder para el archivo de sirena.
+# Por favor, reemplaza este archivo con un archivo MP3 real de sirena de alarma.
+# Rename el archivo de audio a "alarm_siren.mp3"

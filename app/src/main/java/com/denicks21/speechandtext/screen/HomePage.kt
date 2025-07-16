@@ -23,6 +23,8 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.unit.Dp
+import com.denicks21.speechandtext.ui.composables.AnalysisButton
+import com.denicks21.speechandtext.ui.composables.ModeSelectionCard
 import com.denicks21.speechandtext.viewmodel.Incident
 import kotlinx.coroutines.flow.StateFlow
 import kotlin.math.roundToInt
@@ -51,7 +53,10 @@ private fun getFakeLocation(): String = "Loja, Chaguarpamba, Ecuador"
 fun HomePage(
     speechInputFlow: MutableState<String>,
     isListening: Boolean,
+    isManualMode: Boolean,
     onToggleListening: () -> Unit,
+    onModeChange: (Boolean) -> Unit,
+    onAnalyzeClicked: () -> Unit,
 ) {
     // Lectura reactiva del texto transcrito
     val speechInput by speechInputFlow
@@ -159,13 +164,33 @@ fun HomePage(
 
             Spacer(modifier = Modifier.height(0.dp))
 
+            // — Modo de operación (nuevo) —
+            ModeSelectionCard(
+                isManualMode = isManualMode,
+                onModeChange = onModeChange
+            )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
             // — Texto transcrito —
             Text(
                 text = if (speechInput.isNotBlank()) speechInput else "Aquí aparecerá tu texto...",
                 style = MaterialTheme.typography.body1,
                 color = MaterialTheme.colors.onSurface,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
             )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            // — Botón de análisis (solo visible en modo manual) —
+            if (isManualMode) {
+                AnalysisButton(
+                    onClick = onAnalyzeClicked,
+                    enabled = speechInput.isNotBlank()
+                )
+            }
         }
 
         // — Métricas fijas al fondo —

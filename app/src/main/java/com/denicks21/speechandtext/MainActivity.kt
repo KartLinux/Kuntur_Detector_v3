@@ -35,6 +35,7 @@ import androidx.activity.viewModels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.denicks21.speechandtext.viewmodel.HomeViewModel
+import com.denicks21.speechandtext.viewmodel.SpeechToTextViewModel
 
 /**
  * MainActivity: punto de entrada de la app.
@@ -48,6 +49,9 @@ class MainActivity : ComponentActivity() {
 
     /** Estado observable que indica si estamos escuchando activamente. */
     val listening   = mutableStateOf(false)
+
+    /** ViewModel para el análisis de voz a texto y detección de amenazas */
+    private val speechToTextViewModel by viewModels<SpeechToTextViewModel> { SpeechToTextViewModel.Factory() }
 
     /** Instancia de SpeechRecognizer para procesar audio a texto. */
     private lateinit var speechRecognizer: SpeechRecognizer
@@ -78,24 +82,36 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // 1) Verificar y pedir permiso de grabación si no está concedido
-        if (ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.RECORD_AUDIO
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            requestPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        // 1) Verificar y pedir permisos necesarios
+        val requiredPermissions = arrayOf(
+            Manifest.permission.RECORD_AUDIO,
+            Manifest.permission.CAMERA,
+            //Manifest.permission.FLASHLIGHT
+        )
+        
+        // Verificar y solicitar permisos
+        requiredPermissions.forEach { permission ->
+            if (ContextCompat.checkSelfPermission(
+                    this,
+                    permission
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                requestPermissionLauncher.launch(permission)
+            }
         }
 
-        // 2) Configurar el SpeechRecognizer y su listener
+        // 2) Inicializar el ViewModel
+        speechToTextViewModel.initialize(this)
+        
+        // 3) Configurar el SpeechRecognizer y su listener
         setupSpeechRecognizer()
 
-        // 3) Montar la UI con Jetpack Compose
+        // 4) Montar la UI con Jetpack Compose
         setContent {
             AppContent()
         }
 
-        // 4) Auto‐guardado periódico: cada 10 segundos, si estamos escuchando y hay texto
+        // 5) Auto‐guardado periódico: cada 10 segundos, si estamos escuchando y hay texto
         lifecycleScope.launch {
             while (isActive) {
                 delay(10_000L)
@@ -107,6 +123,9 @@ class MainActivity : ComponentActivity() {
                         getString(R.string.toast_auto_saved),
                         Toast.LENGTH_SHORT
                     ).show()
+                    
+                    // Update ViewModel with the current speech input
+                    speechToTextViewModel.updateSpeechInput(speechInput.value)
                 }
             }
         }
@@ -138,12 +157,17 @@ class MainActivity : ComponentActivity() {
 
             // 3.2) NavGraph: controla la navegación y pasa los estados y callbacks
             val navController = rememberNavController()
+            
+            // Set the navigation controller in the ViewModel
+            speechToTextViewModel.navController = navController
+            
             NavGraph(
                 navController     = navController,
                 speechInputState  = speechInput,
                 listeningState    = listening,
                 startListening    = { startListening() },
                 stopListening     = { stopListening() },
+                viewModel         = speechToTextViewModel
             )
         }
     }
@@ -171,9 +195,7 @@ class MainActivity : ComponentActivity() {
                         ?.let { hypothesis ->
                             speechInput.value = hypothesis
                             // Actualiza el ViewModel con el texto parcial
-                            // (esto es opcional, depende de tu lógica
-                            // de negocio si quieres procesar resultados parciales)
-                            //homeViewModel.onSpeechInputChanged(hypothesis)
+                            speechToTextViewModel.updateSpeechInput(hypothesis)
                         }
                 }
 
@@ -183,16 +205,13 @@ class MainActivity : ComponentActivity() {
                         ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                         ?.firstOrNull()
                         ?.let { hypothesis ->
-                            //val prev = speechInput.value.trim()
-                            //val combined = if (prev.isNotEmpty()) "$prev $hypothesis" else hypothesis
-                            //speechInput.value = combined
-
-                            // Igual aquí: pasas el texto final al ViewModel
-                            //homeViewModel.onSpeechInputChanged(combined)
-                            // → Solo aquí lanzamos la inferencia
-                            // UI stays igual…
-                            speechInput.value = if (speechInput.value.isBlank()) hypothesis
-                            else "${speechInput.value} $hypothesis"
+                            val newText = if (speechInput.value.isBlank()) hypothesis
+                                          else "${speechInput.value} $hypothesis"
+                            
+                            speechInput.value = newText
+                            
+                            // Update ViewModel with the new text
+                            speechToTextViewModel.updateSpeechInput(newText)
                         }
                     // Reiniciar escucha si sigue activo
                     if (listening.value) startListening()
