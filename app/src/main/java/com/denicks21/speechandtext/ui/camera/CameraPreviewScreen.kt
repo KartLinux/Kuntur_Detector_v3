@@ -1,5 +1,4 @@
-package com.denicks21.speechandtext.ui.camera
-
+// IMPORTANTE: Asegúrate de tener todos los imports necesarios al inicio
 import android.Manifest
 import android.content.ContentValues
 import android.content.Context
@@ -12,17 +11,9 @@ import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.video.*
 import androidx.camera.video.VideoCapture
-import androidx.camera.video.Recording
-import androidx.camera.video.FallbackStrategy
 import androidx.camera.view.PreviewView
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.*
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
@@ -81,11 +72,11 @@ fun CameraPreviewScreen(
 
     // Permission state
     val cameraPermissionState = rememberPermissionState(Manifest.permission.CAMERA)
-    
+
     // Camera provider
     val cameraProviderFuture = remember { ProcessCameraProvider.getInstance(context) }
     val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
-    
+
     // Recording indicator animation
     val infiniteTransition = rememberInfiniteTransition()
     val pulseAlpha by infiniteTransition.animateFloat(
@@ -101,12 +92,12 @@ fun CameraPreviewScreen(
     LaunchedEffect(Unit) {
         KunturLogger.logCameraEvent("Camera screen launched", "CAMERA_SCREEN")
         cameraPermissionState.launchPermissionRequest()
-        
+
         // Show threat info after a brief delay
         delay(1000)
         showThreatInfo = true
         KunturLogger.logCameraEvent("Threat info displayed", "CAMERA_SCREEN")
-        
+
         // Start timer for recording duration (20 seconds)
         isRecording = true
         KunturLogger.logCameraEvent("Recording started - 20 second timer", "CAMERA_SCREEN")
@@ -117,7 +108,7 @@ fun CameraPreviewScreen(
                 KunturLogger.d("Recording progress: ${i}s elapsed", "CAMERA_SCREEN")
             }
         }
-        
+
         // Stop recording after 20 seconds
         activeRecording?.stop() // 🔁 Esto finaliza la grabación
         activeRecording = null
@@ -161,7 +152,7 @@ fun CameraPreviewScreen(
                             val cameraProvider = cameraProviderFuture.await()
                             val preview = Preview.Builder().build()
                             preview.setSurfaceProvider(previewView.surfaceProvider)
-                            
+
                             // Setup video capture
                             val qualitySelector = QualitySelector.from(
                                 Quality.HIGHEST,
@@ -171,12 +162,12 @@ fun CameraPreviewScreen(
                                 .setQualitySelector(qualitySelector)
                                 .build()
                             val videoCapture = VideoCapture.withOutput(recorder)
-                            
+
                             // Select front camera
                             val cameraSelector = CameraSelector.Builder()
                                 .requireLensFacing(CameraSelector.LENS_FACING_FRONT)
                                 .build()
-                            
+
                             try {
                                 cameraProvider.unbindAll()
                                 val camera = cameraProvider.bindToLifecycle(
@@ -185,37 +176,37 @@ fun CameraPreviewScreen(
                                     preview,
                                     videoCapture
                                 )
-                                
+
                                 // Start recording
                                 if (isRecording) {
                                     val name = SimpleDateFormat("yyyy-MM-dd-HH-mm-ss-SSS", Locale.getDefault())
                                         .format(System.currentTimeMillis())
-                                    
+
                                     val contentValues = ContentValues().apply {
                                         put(MediaStore.MediaColumns.DISPLAY_NAME, name)
                                         put(MediaStore.MediaColumns.MIME_TYPE, "video/mp4")
                                         if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
-                                            put(MediaStore.Video.Media.RELATIVE_PATH, "Movies/KunturSecurityApp")
+                                            put(MediaStore.Video.Media.RELATIVE_PATH, "Download/KunturVideos")
                                         }
                                     }
-                                    
+
                                     val mediaStoreOutput = MediaStoreOutputOptions.Builder(
                                         context.contentResolver,
                                         MediaStore.Video.Media.EXTERNAL_CONTENT_URI
                                     ).setContentValues(contentValues).build()
-                                    
+
                                     try {
                                         // Preparar la grabación
                                         val recordingBuilder = videoCapture.output
                                             .prepareRecording(context, mediaStoreOutput)
-                                        
+
                                         // Habilitar audio si tiene permiso
                                         val pendingRecording = if (hasAudioPermission(context)) {
                                             recordingBuilder.withAudioEnabled()
                                         } else {
                                             recordingBuilder
                                         }
-                                        
+
                                         // Iniciar grabación
                                         activeRecording = pendingRecording.start(
                                             ContextCompat.getMainExecutor(context)
@@ -232,7 +223,7 @@ fun CameraPreviewScreen(
                                                         videoUri = recordEvent.outputResults.outputUri.toString()
                                                         KunturLogger.logCameraEvent("Video capture succeeded: $videoUri", "CAMERA_SCREEN")
                                                         Log.d("CameraScreen", "Video capture succeeded: $videoUri")
-                                                        
+
                                                         // Guardar video en ViewModel
                                                         videoUri?.let { uri ->
                                                             KunturLogger.d("Guardando video en ViewModel: $uri", "CAMERA_SCREEN")
@@ -251,12 +242,12 @@ fun CameraPreviewScreen(
                                         Log.e("CameraScreen", "Video recording failed", e)
                                     }
                                 }
-                                
+
                             } catch (e: Exception) {
                                 Log.e("CameraScreen", "Use case binding failed", e)
                             }
                         }
-                        
+
                         previewView
                     },
                     modifier = Modifier.fillMaxSize()
@@ -273,7 +264,7 @@ fun CameraPreviewScreen(
                             .align(Alignment.TopEnd)
                     )
                 }
-                
+
                 // Time remaining indicator superpuesto en la cámara
                 if (isRecording) {
                     Text(
@@ -287,7 +278,7 @@ fun CameraPreviewScreen(
                     )
                 }
             }
-            
+
             // Threat Information Section - Mitad inferior
             AnimatedVisibility(
                 visible = showThreatInfo && threatAnalysis != null,
@@ -305,142 +296,142 @@ fun CameraPreviewScreen(
                         elevation = 8.dp,
                         modifier = Modifier.fillMaxSize()
                     ) {
-                            Column(
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            // Icono de alerta
+                            Box(
                                 modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(24.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
+                                    .size(80.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.Red.copy(alpha = 0.1f)),
+                                contentAlignment = Alignment.Center
                             ) {
-                                // Icono de alerta
-                                Box(
-                                    modifier = Modifier
-                                        .size(80.dp)
-                                        .clip(CircleShape)
-                                        .background(Color.Red.copy(alpha = 0.1f)),
-                                    contentAlignment = Alignment.Center
+                                Text(
+                                    text = "⚠️",
+                                    style = MaterialTheme.typography.h2
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Text(
+                                text = "¡ALERTA DE AMENAZA!",
+                                style = MaterialTheme.typography.h5,
+                                color = Color.Red,
+                                textAlign = TextAlign.Center
+                            )
+
+                            Spacer(modifier = Modifier.height(24.dp))
+
+                            // Información detallada de la amenaza
+                            Card(
+                                backgroundColor = MaterialTheme.colors.error.copy(alpha = 0.1f),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp)
                                 ) {
-                                    Text(
-                                        text = "⚠️",
-                                        style = MaterialTheme.typography.h2
-                                    )
-                                }
-                                
-                                Spacer(modifier = Modifier.height(16.dp))
-                                
-                                Text(
-                                    text = "¡ALERTA DE AMENAZA!",
-                                    style = MaterialTheme.typography.h5,
-                                    color = Color.Red,
-                                    textAlign = TextAlign.Center
-                                )
-                                
-                                Spacer(modifier = Modifier.height(24.dp))
-                                
-                                // Información detallada de la amenaza
-                                Card(
-                                    backgroundColor = MaterialTheme.colors.error.copy(alpha = 0.1f),
-                                    shape = RoundedCornerShape(12.dp),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Column(
-                                        modifier = Modifier.padding(16.dp)
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Text(
-                                                text = "Tipo:",
-                                                style = MaterialTheme.typography.subtitle1,
-                                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.7f)
-                                            )
-                                            Text(
-                                                text = threat.threat_type,
-                                                style = MaterialTheme.typography.subtitle1,
-                                                color = Color.Red
-                                            )
-                                        }
-                                        
-                                        Spacer(modifier = Modifier.height(8.dp))
-                                        
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Text(
-                                                text = "Palabra clave:",
-                                                style = MaterialTheme.typography.subtitle1,
-                                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.7f)
-                                            )
-                                            Text(
-                                                text = threat.keyword,
-                                                style = MaterialTheme.typography.subtitle1,
-                                                color = Color.Red
-                                            )
-                                        }
-                                    }
-                                }
-                                
-                                Spacer(modifier = Modifier.height(16.dp))
-                                
-                                Text(
-                                    text = "Justificación:",
-                                    style = MaterialTheme.typography.subtitle1,
-                                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.7f)
-                                )
-                                
-                                Spacer(modifier = Modifier.height(8.dp))
-                                
-                                Text(
-                                    text = threat.justification,
-                                    style = MaterialTheme.typography.body1,
-                                    textAlign = TextAlign.Center,
-                                    color = MaterialTheme.colors.onSurface
-                                )
-                                
-                                Spacer(modifier = Modifier.height(24.dp))
-                                
-                                // Estado de grabación
-                                if (isRecording) {
                                     Row(
-                                        verticalAlignment = Alignment.CenterVertically
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(12.dp)
-                                                .clip(CircleShape)
-                                                .background(Color.Red.copy(alpha = pulseAlpha))
-                                        )
-                                        Spacer(modifier = Modifier.width(8.dp))
                                         Text(
-                                            text = "Grabando evidencia: ${20 - elapsedTime}s restantes",
-                                            style = MaterialTheme.typography.body2,
+                                            text = "Tipo:",
+                                            style = MaterialTheme.typography.subtitle1,
+                                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.7f)
+                                        )
+                                        Text(
+                                            text = threat.threat_type,
+                                            style = MaterialTheme.typography.subtitle1,
                                             color = Color.Red
                                         )
                                     }
-                                } else if (recordingComplete) {
+
+                                    Spacer(modifier = Modifier.height(8.dp))
+
                                     Row(
-                                        verticalAlignment = Alignment.CenterVertically
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
                                         Text(
-                                            text = "✓",
-                                            style = MaterialTheme.typography.h6,
-                                            color = Color.Green
+                                            text = "Palabra clave:",
+                                            style = MaterialTheme.typography.subtitle1,
+                                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.7f)
                                         )
-                                        Spacer(modifier = Modifier.width(8.dp))
                                         Text(
-                                            text = "Evidencia grabada exitosamente",
-                                            style = MaterialTheme.typography.body2,
-                                            color = Color.Green
+                                            text = threat.keyword,
+                                            style = MaterialTheme.typography.subtitle1,
+                                            color = Color.Red
                                         )
                                     }
                                 }
+                            }
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Text(
+                                text = "Justificación:",
+                                style = MaterialTheme.typography.subtitle1,
+                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.7f)
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Text(
+                                text = threat.justification,
+                                style = MaterialTheme.typography.body1,
+                                textAlign = TextAlign.Center,
+                                color = MaterialTheme.colors.onSurface
+                            )
+
+                            Spacer(modifier = Modifier.height(24.dp))
+
+                            // Estado de grabación
+                            if (isRecording) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(12.dp)
+                                            .clip(CircleShape)
+                                            .background(Color.Red.copy(alpha = pulseAlpha))
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "Grabando evidencia: ${20 - elapsedTime}s restantes",
+                                        style = MaterialTheme.typography.body2,
+                                        color = Color.Red
+                                    )
+                                }
+                            } else if (recordingComplete) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "✓",
+                                        style = MaterialTheme.typography.h6,
+                                        color = Color.Green
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "Evidencia grabada exitosamente",
+                                        style = MaterialTheme.typography.body2,
+                                        color = Color.Green
+                                    )
+                                }
+                            }
                         }
                     }
                 }
             }
-            
+
             // Mensaje por defecto cuando no hay amenaza - fuera del AnimatedVisibility
             if (!showThreatInfo || threatAnalysis == null) {
                 Box(
@@ -485,7 +476,7 @@ fun CameraPreviewScreen(
                 }
             }
         }
-        
+
         // Stop recording button - Flotante sobre toda la pantalla
         FloatingActionButton(
             onClick = {

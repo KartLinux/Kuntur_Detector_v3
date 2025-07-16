@@ -1,5 +1,6 @@
 package com.denicks21.speechandtext.navigation
 
+import CameraPreviewScreen
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.Scaffold
@@ -15,7 +16,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.denicks21.speechandtext.MainActivity
 import com.denicks21.speechandtext.screen.*
-import com.denicks21.speechandtext.ui.camera.CameraPreviewScreen
 import com.denicks21.speechandtext.ui.composables.AppBottomBar
 import com.denicks21.speechandtext.ui.composables.AppTopBar
 import com.denicks21.speechandtext.util.KunturLogger
@@ -86,7 +86,7 @@ fun NavGraph(
                 composable(NavScreens.CameraPreviewScreen.route) {
                     // Get current threat analysis from ViewModel
                     val threatAnalysis by viewModel.threatAnalysis.collectAsState()
-                    
+
                     CameraPreviewScreen(
                         navController = navController,
                         threatAnalysis = threatAnalysis,
