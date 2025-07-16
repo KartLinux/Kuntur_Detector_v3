@@ -24,3 +24,8 @@ data class VideoFile(
     val uri: String,
     val name: String
 )
+data class UserLocation(
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    val address: String = "Obteniendo ubicación..."
+)

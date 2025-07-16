@@ -121,7 +121,7 @@ fun HomePage(
     }
     // Obtener la ubicación del usuario
     val context = LocalContext.current
-    val locationText by rememberUserLocation(context)
+    val location by rememberUserLocation(LocalContext.current)
 
     // Auto-borrado del texto en tiempo real (cada 10 segundos)
     LaunchedEffect(cleanSpeechInput) {
@@ -174,7 +174,7 @@ fun HomePage(
                 )
                 Spacer(modifier = Modifier.width(LOCATION_SPACING))
                 Text(
-                    text = locationText,
+                    text = location.address+" Latitud: "+location.latitude+" Longitud: "+location.longitude,
                     style = MaterialTheme.typography.overline,
                     color = MaterialTheme.colors.onPrimary
                 )
