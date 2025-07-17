@@ -91,10 +91,12 @@ fun NavGraph(
                         navController = navController,
                         threatAnalysis = threatAnalysis,
                         videoViewModel = videoViewModel, // ✅ PASO CLAVE
+                        /*
                         onStopRecording = {
                             viewModel.stopAlarm()
                             navController.navigate(NavScreens.HomePage.route)
                         }
+                        */
                     )
                 }
                 composable(NavScreens.MapPage.route) {

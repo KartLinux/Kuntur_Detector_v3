@@ -73,4 +73,14 @@ object KunturLogger {
     fun logWarning(s: String, s1: String) {
         w("NAVIGATION: $s -> $", s1)
     }
+
+    /**
+     * Método general de log que imprime el mensaje como información
+     * @param message El mensaje a registrar
+     * @param component El componente que genera el log (usado como etiqueta secundaria)
+     */
+    fun log(message: String, component: String) {
+        Log.d(component, message)
+        Log.d(TAG, "[$component] $message")
+    }
 }
